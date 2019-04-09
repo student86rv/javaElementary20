@@ -1,48 +1,58 @@
 package com.company;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import org.apache.commons.io.FileUtils;
+
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
-public class FileStorage implements Storage{
+public class FileStorage implements Storage {
 
-    private List<User> users;
-    //private String fileName;
+    private List<User> users = new ArrayList<>();
+    private File userFile;
     private int count = 0;
 
     public FileStorage(String fileName) {
-        File file = new File(System.getProperty("user.dir"), fileName);
-        System.out.println(file.getAbsolutePath());
-        if (file.exists()) {
-            this.users = readFromFile(fileName);
+        this.userFile = new File(System.getProperty("user.dir"), fileName);
+        if (userFile.exists()) {
+            this.users = readFromFile(userFile);
             System.out.println("Users in file: " + users.size());
-        }
-        else {
-            System.out.println("New file: " + fileName);
-            writeToFile(null, fileName);
+            count = users.size();
+        } else {
+            System.out.println("New file: " + userFile.getName());
+            writeToFile(users, userFile);
         }
     }
 
     @Override
     public void removeAll() {
         users.clear();
+        count = 0;
+        writeToFile(users, userFile);
     }
 
     @Override
     public void removeUser(int id) {
-        for (User user : users) {
-            if (user.getId() == id) {
-                users.remove(user);
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).getId() == id) {
+                users.remove(i);
             }
         }
+        writeToFile(users, userFile);
     }
 
     @Override
     public void removeUserByName(String name) {
-        for (User user : users) {
-            if (user.getName().equals(name)) {
-                users.remove(user);
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).getName().equals(name)) {
+                users.remove(i);
             }
         }
+        writeToFile(users, userFile);
     }
 
     @Override
@@ -50,6 +60,7 @@ public class FileStorage implements Storage{
         user.setId(count);
         users.add(user);
         count++;
+        writeToFile(users, userFile);
     }
 
     @Override
@@ -59,12 +70,14 @@ public class FileStorage implements Storage{
                 users.set(users.indexOf(oldUser), user);
             }
         }
+        writeToFile(users, userFile);
     }
 
     @Override
     public User getUser(int id) {
+        users = readFromFile(userFile);
         for (User user : users) {
-                if (user.getId() == id) {
+            if (user.getId() == id) {
                 return user;
             }
         }
@@ -76,12 +89,26 @@ public class FileStorage implements Storage{
         return users;
     }
 
-    private void writeToFile(List<User> users, String fileName) {
-
+    private void writeToFile(List<User> users, File file) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        String jsonString = gson.toJson(users);
+        try {
+            FileUtils.writeStringToFile(file, jsonString, "UTF-8");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private List<User> readFromFile(String fileName) {
-
-        return null;
+    private List<User> readFromFile(File file) {
+        String jsonString = "";
+        try {
+            jsonString = FileUtils.readFileToString(file, "UTF-8");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        List<User> usersList = new Gson()
+                .fromJson(jsonString, new TypeToken<ArrayList<User>>() {}
+                .getType());
+        return usersList;
     }
 }
